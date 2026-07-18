@@ -36,6 +36,12 @@ public class SortVisualizer : MonoBehaviour
     private readonly Color normalColor = new Color(0.35f, 0.60f, 0.90f);
     private readonly Color highlightColor = new Color(0.95f, 0.80f, 0.20f);
 
+    // Extra colours used by the searching round.
+    private readonly Color examineColor = new Color(0.95f, 0.80f, 0.20f); // bar being checked
+    private readonly Color targetColor = new Color(0.85f, 0.35f, 0.85f);  // the bar we hunt for
+    private readonly Color foundColor = new Color(0.30f, 0.85f, 0.40f);   // found it!
+    private int targetIndex = -1;
+
     // layout numbers (worked out once in BuildBars)
     private float slot;   // horizontal space per bar
     private float barWidth;
@@ -116,7 +122,62 @@ public class SortVisualizer : MonoBehaviour
         {
             ResizeBar(i);
         }
+        targetIndex = -1;
         ClearHighlight();
+    }
+
+    // ------------------------------------------------------------------
+    // Searching support (used by the searching round).
+    // ------------------------------------------------------------------
+
+    // Put the bars in ascending order (binary search needs a sorted list).
+    public void SortAscending()
+    {
+        for (int i = 0; i < values.Length; i++)
+        {
+            values[i] = i + 1;
+        }
+        for (int i = 0; i < bars.Length; i++)
+        {
+            ResizeBar(i);
+        }
+        targetIndex = -1;
+        ClearHighlight();
+    }
+
+    // Colour the bar the search is hunting for.
+    public void SetTarget(int targetValue)
+    {
+        targetIndex = System.Array.IndexOf(values, targetValue);
+        for (int i = 0; i < bars.Length; i++)
+        {
+            bars[i].color = (i == targetIndex) ? targetColor : normalColor;
+        }
+    }
+
+    // Highlight the bar currently being checked, keeping the target bar visible.
+    public void Examine(int index)
+    {
+        for (int i = 0; i < bars.Length; i++)
+        {
+            Color c = normalColor;
+            if (i == targetIndex) c = targetColor;
+            if (i == index) c = examineColor;
+            bars[i].color = c;
+        }
+    }
+
+    // Flash the found bar green.
+    public void MarkFound(int index)
+    {
+        bars[index].color = foundColor;
+    }
+
+    // Runs a chosen search strategy on the (sorted) bars. Stops any animation already running.
+    public void PlaySearch(ISearchStrategy strategy, int targetValue)
+    {
+        if (sortRoutine != null) StopCoroutine(sortRoutine);
+        sortRoutine = StartCoroutine(strategy.Search(this, targetValue, stepDelay));
     }
 
     // ------------------------------------------------------------------

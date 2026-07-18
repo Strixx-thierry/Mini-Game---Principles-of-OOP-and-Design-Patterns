@@ -37,13 +37,16 @@ public class GameManager : MonoBehaviour
     public int Score { get { return score; } }
     public int Level { get { return level; } }
 
-    // The four labels shown on the answer buttons (last two are decoys we don't implement).
-    private readonly string[] optionNames = { "Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort" };
+    // Answer labels for each category (the last two of each are decoys we don't implement).
+    private readonly string[] sortOptions = { "Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort" };
+    private readonly string[] searchOptions = { "Linear Search", "Binary Search", "Jump Search", "Interpolation Search" };
 
-    // The sorting algorithms we can actually SHOW (Strategy objects).
-    private ISortStrategy[] strategies;
+    // The algorithms we can actually SHOW (Strategy objects).
+    private ISortStrategy[] sortStrategies;
+    private ISearchStrategy[] searchStrategies;
 
-    private SortingQuestion currentQuestion;
+    // Held as the BASE type Question - GameManager does not care which subclass it is.
+    private Question currentQuestion;
 
     private void Awake()
     {
@@ -59,7 +62,8 @@ public class GameManager : MonoBehaviour
         if (ui == null) ui = FindFirstObjectByType<UIManager>();
         if (viz == null) viz = FindFirstObjectByType<SortVisualizer>();
 
-        strategies = new ISortStrategy[] { new BubbleSortStrategy(), new SelectionSortStrategy() };
+        sortStrategies = new ISortStrategy[] { new BubbleSortStrategy(), new SelectionSortStrategy() };
+        searchStrategies = new ISearchStrategy[] { new LinearSearchStrategy(), new BinarySearchStrategy() };
     }
 
     private void Start()
@@ -103,7 +107,7 @@ public class GameManager : MonoBehaviour
     private void NextQuestion()
     {
         questionNumber++;
-        currentQuestion = CreateRandomSortingQuestion();
+        currentQuestion = CreateRandomQuestion();
 
         // Show the question number in the prompt so it is obvious the question changed.
         ui.ShowQuestion("Q" + questionNumber + "   -   " + currentQuestion.Prompt,
@@ -111,24 +115,33 @@ public class GameManager : MonoBehaviour
 
         // SPEED-RUN HELPER: print the correct answer to the Console so you can test fast.
         // (Remove this line before the final submission if you like.)
-        Debug.Log("[Q" + questionNumber + "] Correct answer: " + currentQuestion.Strategy.Name);
+        Debug.Log("[Q" + questionNumber + "] Correct answer: " + currentQuestion.CorrectAnswerName);
 
-        // ...then SHOW the algorithm: scramble the bars, then run the chosen Strategy.
-        viz.Shuffle();
-        viz.PlaySort(currentQuestion.Strategy);
+        // POLYMORPHISM: a sorting question animates a sort, a searching question animates a
+        // search. We just call Present() - the question knows how to show itself.
+        currentQuestion.Present(viz);
     }
 
-    // Builds a question whose correct answer is whichever algorithm we actually run.
-    private SortingQuestion CreateRandomSortingQuestion()
+    // Randomly build either a sorting question or a searching question, so runs mix both.
+    private Question CreateRandomQuestion()
     {
-        // Pick one of the algorithms we can visualise (Bubble or Selection).
-        int pick = Random.Range(0, strategies.Length);
-        ISortStrategy strategy = strategies[pick];
+        bool doSorting = Random.value < 0.5f;
 
-        // The correct option is the one whose label matches the running algorithm's name.
-        int correctIndex = System.Array.IndexOf(optionNames, strategy.Name);
-
-        return new SortingQuestion(strategy, optionNames, correctIndex);
+        if (doSorting)
+        {
+            // Pick a sort we can visualise (Bubble or Selection); its name is the answer.
+            ISortStrategy s = sortStrategies[Random.Range(0, sortStrategies.Length)];
+            int correct = System.Array.IndexOf(sortOptions, s.Name);
+            return new SortingQuestion(s, sortOptions, correct);
+        }
+        else
+        {
+            // Pick a search (Linear or Binary) and a random target height to hunt for.
+            ISearchStrategy s = searchStrategies[Random.Range(0, searchStrategies.Length)];
+            int target = Random.Range(1, viz.barCount + 1); // a height that exists in the bars
+            int correct = System.Array.IndexOf(searchOptions, s.Name);
+            return new SearchingQuestion(s, target, searchOptions, correct);
+        }
     }
 
     // OBSERVER callback: runs whenever the player clicks an answer button.

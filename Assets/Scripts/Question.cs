@@ -1,26 +1,39 @@
 // Question.cs
 //
 // OOP - ABSTRACTION:
-// "Question" is an ABSTRACT base class. It describes WHAT every question has (a prompt and a
-// list of answer options) and WHAT it must do (say whether a chosen option is correct),
-// without deciding HOW that check works. You can never create a plain "Question" - only a
-// concrete subclass such as SortingQuestion.
+// "Question" is an ABSTRACT base class. It describes WHAT every question has (a prompt, a
+// list of options, and which option is correct) and WHAT it must do (show itself on screen),
+// without deciding HOW. You can never create a plain "Question" - only a concrete subclass
+// such as SortingQuestion or SearchingQuestion.
 public abstract class Question
 {
-    // OOP - ENCAPSULATION:
-    // The data is exposed through read-only properties (private set), so other scripts can
-    // read a question but cannot change its prompt or options after it is created.
+    // OOP - ENCAPSULATION: data is exposed read-only; the correct index is hidden (protected).
     public string Prompt { get; private set; }
     public string[] Options { get; private set; }
+    protected int CorrectIndex { get; private set; }
 
-    protected Question(string prompt, string[] options)
+    protected Question(string prompt, string[] options, int correctIndex)
     {
         Prompt = prompt;
         Options = options;
+        CorrectIndex = correctIndex;
+    }
+
+    // Shared for every question: is the clicked option the correct one?
+    public bool IsCorrect(int chosenIndex)
+    {
+        return chosenIndex == CorrectIndex;
+    }
+
+    // Handy for logging / debugging: the text of the correct answer.
+    public string CorrectAnswerName
+    {
+        get { return Options[CorrectIndex]; }
     }
 
     // OOP - POLYMORPHISM:
-    // Every subclass provides its own version of IsCorrect. The game holds a "Question"
-    // reference and calls IsCorrect(i) without caring which concrete subclass it really is.
-    public abstract bool IsCorrect(int chosenIndex);
+    // Each question type shows ITSELF differently on the bars - a sorting question animates a
+    // sort, a searching question animates a search. GameManager just calls Present() and does
+    // not need to know which concrete type it is holding.
+    public abstract void Present(SortVisualizer viz);
 }
