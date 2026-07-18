@@ -45,10 +45,9 @@ public class UIManager : MonoBehaviour
     public Button playAgainButton;
     public Button menuButton;
 
-    // ---- Events the game logic subscribes to later ----
+    // ---- Events the game logic (GameManager) subscribes to ----
     public event Action OnNewGame;
     public event Action OnContinue;
-    public event Action OnExit;
     public event Action<int> OnOptionClicked; // which answer (0..3) was clicked
     public event Action OnPlayAgain;
     public event Action OnBackToMenu;
@@ -58,7 +57,7 @@ public class UIManager : MonoBehaviour
         // --- wire the menu buttons to their events ---
         if (newGameButton != null) newGameButton.onClick.AddListener(() => Raise(OnNewGame));
         if (continueButton != null) continueButton.onClick.AddListener(() => Raise(OnContinue));
-        if (exitButton != null) exitButton.onClick.AddListener(() => Raise(OnExit));
+        if (exitButton != null) exitButton.onClick.AddListener(QuitGame);
 
         // --- wire the four answer buttons (each reports its own index) ---
         if (optionButtons != null)
@@ -81,34 +80,10 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
-        // ---- TEMPORARY placeholder flow so we can click through the whole game before the
-        // ---- real logic exists. All of this gets replaced by GameManager/QuizManager later.
+        // Default to the menu. GameManager (the Observer) reacts to the button events and
+        // drives everything else.
         ShowStart();
-
-        OnNewGame += () => { Debug.Log("NEW GAME"); StartPlaceholderRound(); };
-        OnContinue += () => { Debug.Log("CONTINUE (save system added later)"); StartPlaceholderRound(); };
-        OnExit += QuitGame;
-        OnPlayAgain += () => { Debug.Log("PLAY AGAIN"); StartPlaceholderRound(); };
-        OnBackToMenu += () => { Debug.Log("BACK TO MENU"); ShowStart(); };
-
-        // In the placeholder, option 0 is "correct" -> success end, anything else -> fail end.
-        OnOptionClicked += (index) =>
-        {
-            Debug.Log("Clicked option " + index);
-            bool success = (index == 0);
-            ShowEnd(success, success ? 100 : 0);
-        };
-    }
-
-    private void StartPlaceholderRound()
-    {
-        ShowGame();
-        SetLevel(1);
-        SetScore(0);
         SetTimer(1f);
-        ShowQuestion(
-            "Watch the bars. Which sorting algorithm is running?",
-            new string[] { "Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort" });
     }
 
     // ------------------------------------------------------------------

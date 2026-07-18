@@ -88,10 +88,14 @@ public class SortVisualizer : MonoBehaviour
         }
     }
 
-    // Runs a chosen sorting strategy on the bars (used later by the question flow).
+    private Coroutine sortRoutine;
+
+    // Runs a chosen sorting strategy on the bars. Stops any sort already in progress first,
+    // so starting a new question does not leave an old animation running.
     public void PlaySort(ISortStrategy strategy)
     {
-        StartCoroutine(strategy.Sort(this, stepDelay));
+        if (sortRoutine != null) StopCoroutine(sortRoutine);
+        sortRoutine = StartCoroutine(strategy.Sort(this, stepDelay));
     }
 
     // ------------------------------------------------------------------
