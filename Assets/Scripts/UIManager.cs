@@ -107,8 +107,8 @@ public class UIManager : MonoBehaviour
         SetScore(0);
         SetTimer(1f);
         ShowQuestion(
-            "Which OOP principle hides an object's data behind methods?",
-            new string[] { "Encapsulation", "Inheritance", "Polymorphism", "Abstraction" });
+            "Watch the bars. Which sorting algorithm is running?",
+            new string[] { "Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort" });
     }
 
     // ------------------------------------------------------------------
