@@ -1,19 +1,4 @@
-// UIManager.cs
-//
-// UIManager is the single place the game talks to the screen. It does NOT build the UI -
-// the Editor tool "Tools > Algorithm Arena > Build Game Scene" creates everything and drops
-// the references into the public fields below.
-//
-// The whole game lives in ONE scene using three PANELS that we show or hide:
-//   - Start panel  : the menu (NEW GAME / CONTINUE GAME / EXIT)
-//   - Game panel   : the quiz (level, score, timer, question, four answers)
-//   - End panel    : the result, in a SUCCESS or a FAIL state
-//
-// At runtime this script (1) makes the buttons report what was clicked through events, and
-// (2) offers small methods the game logic will call later to switch panels and update text.
-//
-// NOTE: this is UI "plumbing", not the graded OOP/pattern code. The temporary placeholder
-// wiring in Start() gets removed once the real game logic (GameManager/QuizManager) exists.
+// One scene, three panels; buttons report clicks as events for GameManager to handle.
 
 using System;            // for Action (event callbacks)
 using UnityEngine;
@@ -22,6 +7,7 @@ using UnityEngine.UI;    // Text, Button, Image
 public class UIManager : MonoBehaviour
 {
     // ---- Panels (whole screens we turn on/off) ----
+
     public GameObject startPanel;
     public GameObject gamePanel;
     public GameObject endPanel;
@@ -45,7 +31,7 @@ public class UIManager : MonoBehaviour
     public Button playAgainButton;
     public Button menuButton;
 
-    // ---- Events the game logic (GameManager) subscribes to ----
+    // ---- Events GameManager subscribes to ----
     public event Action OnNewGame;
     public event Action OnContinue;
     public event Action<int> OnOptionClicked; // which answer (0..3) was clicked
@@ -80,15 +66,12 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
-        // Default to the menu. GameManager (the Observer) reacts to the button events and
-        // drives everything else.
+        // Default to the menu; GameManager reacts to the events and drives the rest.
         ShowStart();
         SetTimer(1f);
     }
 
-    // ------------------------------------------------------------------
-    // Panel switching - the game logic calls these to change screens.
-    // ------------------------------------------------------------------
+    // ---- Panel switching ----
 
     public void ShowStart()
     {
@@ -120,9 +103,7 @@ public class UIManager : MonoBehaviour
         if (endPanel != null) endPanel.SetActive(end);
     }
 
-    // ------------------------------------------------------------------
-    // HUD updates the game logic calls during a round.
-    // ------------------------------------------------------------------
+    // ---- HUD updates during a round ----
 
     public void SetLevel(int level)
     {
@@ -140,7 +121,7 @@ public class UIManager : MonoBehaviour
         if (timerFill != null) timerFill.fillAmount = Mathf.Clamp01(fraction);
     }
 
-    // Shows a prompt and up to 4 options. Extra buttons hide (e.g. True/False uses 2).
+    // Shows a prompt and up to 4 options; unused buttons hide.
     public void ShowQuestion(string prompt, string[] options)
     {
         if (questionText != null) questionText.text = prompt;
@@ -153,8 +134,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // ------------------------------------------------------------------
-
     private void QuitGame()
     {
         Debug.Log("EXIT");
@@ -164,7 +143,7 @@ public class UIManager : MonoBehaviour
 #endif
     }
 
-    // Small helper so we can safely raise a parameterless event.
+    // Null-safe raise for the parameterless events.
     private void Raise(Action e)
     {
         if (e != null) e();

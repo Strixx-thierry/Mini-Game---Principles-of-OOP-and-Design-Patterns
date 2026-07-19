@@ -1,23 +1,9 @@
-// GameManager.cs
-//
-// PATTERN - SINGLETON (creational):
-// There is exactly ONE GameManager, reachable from anywhere as GameManager.Instance. It owns
-// the game's global state (score, level, current question) so that state lives in one place
-// instead of being scattered around.
-//
-// PATTERN - OBSERVER (behavioral):
-// GameManager does not poll the buttons. Instead it SUBSCRIBES to the events that UIManager
-// raises (OnNewGame, OnOptionClicked, ...). When the player clicks, UIManager broadcasts and
-// GameManager reacts. UI and logic stay decoupled.
-//
-// It also drives the "show, don't tell" loop: pick a sorting Strategy, run it on the bars,
-// and mark the matching option as the correct answer.
+// Singleton owning the game state; observes UIManager's events instead of polling buttons.
 
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    // --- Singleton access point ---
     public static GameManager Instance { get; private set; }
 
     [Header("Wiring (auto-found if left empty)")]
@@ -29,28 +15,27 @@ public class GameManager : MonoBehaviour
     public int questionsPerLevel = 3;
     public int levelsToWin = 3;
 
-    // OOP - ENCAPSULATION: state is private; other scripts read it through the properties.
+    // Private state; other scripts only get the read-only properties.
     private int score;
     private int level;
     private int correctThisLevel;
-    private int questionNumber; // counts questions across the whole run (Q1, Q2, ...)
+    private int questionNumber; // counting the question q1,q2
     public int Score { get { return score; } }
     public int Level { get { return level; } }
 
-    // Answer labels for each category (the last two of each are decoys we don't implement).
     private readonly string[] sortOptions = { "Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort" };
     private readonly string[] searchOptions = { "Linear Search", "Binary Search", "Jump Search", "Interpolation Search" };
 
-    // The algorithms we can actually SHOW (Strategy objects).
+    // The algorithms we can actually show.
     private ISortStrategy[] sortStrategies;
     private ISearchStrategy[] searchStrategies;
 
-    // Held as the BASE type Question - GameManager does not care which subclass it is.
+    // Base type, so we do not care which subclass it is.
     private Question currentQuestion;
 
     private void Awake()
     {
-        // SINGLETON: keep the first instance, destroy any duplicate.
+        // Keep the first instance, destroy any duplicate.
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -58,7 +43,7 @@ public class GameManager : MonoBehaviour
         }
         Instance = this;
 
-        // Find the helpers if the scene builder did not assign them.
+        // Fall back if the scene builder did not assign them.
         if (ui == null) ui = FindFirstObjectByType<UIManager>();
         if (viz == null) viz = FindFirstObjectByType<SortVisualizer>();
 
@@ -68,20 +53,20 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // OBSERVER: subscribe to the UI's events.
+        // Subscribe to the UI's events.
         ui.OnNewGame += StartGame;
-        ui.OnContinue += StartGame;      // CONTINUE = restart for now (save system comes later)
+        ui.OnContinue += StartGame;      // restart for now; no save system yet
         ui.OnPlayAgain += StartGame;
         ui.OnBackToMenu += ui.ShowStart;
         ui.OnOptionClicked += HandleAnswer;
 
-        if (viz != null) viz.autoDemo = false; // GameManager drives the bars now, not the demo
+        if (viz != null) viz.autoDemo = false; // we drive the bars now, not the demo loop
         ui.ShowStart();
     }
 
     private void OnDestroy()
     {
-        // Good practice: stop listening when this object goes away.
+        // Stop listening when this object goes away.
         if (ui == null) return;
         ui.OnNewGame -= StartGame;
         ui.OnContinue -= StartGame;
@@ -89,8 +74,6 @@ public class GameManager : MonoBehaviour
         ui.OnBackToMenu -= ui.ShowStart;
         ui.OnOptionClicked -= HandleAnswer;
     }
-
-    // ------------------------------------------------------------------
 
     private void StartGame()
     {
@@ -109,34 +92,31 @@ public class GameManager : MonoBehaviour
         questionNumber++;
         currentQuestion = CreateRandomQuestion();
 
-        // Show the question number in the prompt so it is obvious the question changed.
+        // Number the prompt so it is obvious the question changed.
         ui.ShowQuestion("Q" + questionNumber + "   -   " + currentQuestion.Prompt,
             currentQuestion.Options);
 
-        // SPEED-RUN HELPER: print the correct answer to the Console so you can test fast.
-        // (Remove this line before the final submission if you like.)
+        // Testing helper - remove before submitting.
         Debug.Log("[Q" + questionNumber + "] Correct answer: " + currentQuestion.CorrectAnswerName);
 
-        // POLYMORPHISM: a sorting question animates a sort, a searching question animates a
-        // search. We just call Present() - the question knows how to show itself.
+        // The question knows how to show itself.
         currentQuestion.Present(viz);
     }
 
-    // Randomly build either a sorting question or a searching question, so runs mix both.
+    // Coin-flip between a sorting and a searching question, so runs mix both.
     private Question CreateRandomQuestion()
     {
         bool doSorting = Random.value < 0.5f;
 
         if (doSorting)
         {
-            // Pick a sort we can visualise (Bubble or Selection); its name is the answer.
+            // The strategy's name is the correct answer.
             ISortStrategy s = sortStrategies[Random.Range(0, sortStrategies.Length)];
             int correct = System.Array.IndexOf(sortOptions, s.Name);
             return new SortingQuestion(s, sortOptions, correct);
         }
         else
         {
-            // Pick a search (Linear or Binary) and a random target height to hunt for.
             ISearchStrategy s = searchStrategies[Random.Range(0, searchStrategies.Length)];
             int target = Random.Range(1, viz.barCount + 1); // a height that exists in the bars
             int correct = System.Array.IndexOf(searchOptions, s.Name);
@@ -144,7 +124,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // OBSERVER callback: runs whenever the player clicks an answer button.
+    // Runs whenever the player clicks an answer button.
     private void HandleAnswer(int chosenIndex)
     {
         if (currentQuestion == null) return; // ignore clicks after the game ended
@@ -155,13 +135,12 @@ public class GameManager : MonoBehaviour
             correctThisLevel++;
             ui.SetScore(score);
 
-            // Every few correct answers, level up.
             if (correctThisLevel >= questionsPerLevel)
             {
                 level++;
                 correctThisLevel = 0;
 
-                // Cleared all levels? That is a WIN.
+                // Cleared every level - win.
                 if (level > levelsToWin)
                 {
                     currentQuestion = null;
@@ -175,7 +154,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // One wrong answer ends the run (a FAIL).
+            // One wrong answer ends the run.
             currentQuestion = null;
             ui.ShowEnd(false, score);
         }

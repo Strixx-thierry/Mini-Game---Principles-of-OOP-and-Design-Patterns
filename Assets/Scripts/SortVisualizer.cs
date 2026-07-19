@@ -1,14 +1,4 @@
-// SortVisualizer.cs
-//
-// Draws a row of vertical bars (an array shown as heights) and gives the sorting strategies
-// simple operations to work with: read a value, swap two bars, and highlight the two bars
-// being compared. The strategies (BubbleSortStrategy / SelectionSortStrategy) animate by
-// calling these while pausing between steps, so the player watches the algorithm run.
-//
-// It also owns the Fisher-Yates shuffle (ALGORITHM 2) used to scramble the bars each round.
-//
-// TEMPORARY: Start() runs an auto-demo that shuffles and sorts on a loop so you can see it
-// working. That demo is removed once real questions drive the visualizer.
+// Draws the array as bars and gives the strategies their operations: read, swap, highlight.
 
 using System.Collections;
 using UnityEngine;
@@ -17,33 +7,30 @@ using UnityEngine.UI;
 public class SortVisualizer : MonoBehaviour
 {
     [Header("Setup")]
-    public int barCount = 8;         // how many bars to sort
-    public float stepDelay = 0.15f;  // pause between algorithm steps (bigger = slower/clearer)
+    public int barCount = 8;
+    public float stepDelay = 0.15f;  // pause between steps; bigger = slower and clearer
 
-    // Where to draw the bars. If the Scene Builder assigns a slot inside the game panel,
-    // the bars appear there. If left empty, the visualizer makes its own canvas (handy for
-    // testing in an empty scene).
+    // Where to draw. Left empty, the visualizer builds its own canvas (empty-scene testing).
     public RectTransform barsParent;
 
-    // TEMPORARY: when true, Start() runs the auto-demo loop so you can watch it. The real
-    // question flow (added next) sets this false and drives the sort itself.
+    // Standalone demo loop. GameManager turns this off and drives the bars itself.
     public bool autoDemo = true;
 
-    private int[] values;            // the array being sorted (heights of the bars)
+    private int[] values;            // the array being sorted (bar heights)
     private Image[] bars;            // one Image per value
-    private RectTransform container; // holds the bars
+    private RectTransform container;
 
     private readonly Color normalColor = new Color(0.35f, 0.60f, 0.90f);
     private readonly Color highlightColor = new Color(0.95f, 0.80f, 0.20f);
 
-    // Extra colours used by the searching round.
-    private readonly Color examineColor = new Color(0.95f, 0.80f, 0.20f); // bar being checked
-    private readonly Color targetColor = new Color(0.85f, 0.35f, 0.85f);  // the bar we hunt for
-    private readonly Color foundColor = new Color(0.30f, 0.85f, 0.40f);   // found it!
+    // Searching-round colours.
+    private readonly Color examineColor = new Color(0.95f, 0.80f, 0.20f); // being checked
+    private readonly Color targetColor = new Color(0.85f, 0.35f, 0.85f);  // what we hunt for
+    private readonly Color foundColor = new Color(0.30f, 0.85f, 0.40f);
     private int targetIndex = -1;
 
-    // layout numbers (worked out once in BuildBars)
-    private float slot;   // horizontal space per bar
+    // Layout, worked out once in BuildBars.
+    private float slot;       // horizontal space per bar
     private float barWidth;
     private float heightUnit; // pixels of height per +1 of value
 
@@ -51,13 +38,8 @@ public class SortVisualizer : MonoBehaviour
     {
         BuildBars();
 
-        // ---- TEMPORARY demo so we can SEE it before questions exist ----
         if (autoDemo) StartCoroutine(DemoLoop());
     }
-
-    // ------------------------------------------------------------------
-    // Operations the sorting strategies use.
-    // ------------------------------------------------------------------
 
     public int Count { get { return values.Length; } }
 
@@ -66,7 +48,7 @@ public class SortVisualizer : MonoBehaviour
         return values[index];
     }
 
-    // Swap two bars: swap their values, then resize both to match.
+    // Swap the values, then resize both bars to match.
     public void Swap(int a, int b)
     {
         int temp = values[a];
@@ -77,7 +59,7 @@ public class SortVisualizer : MonoBehaviour
         ResizeBar(b);
     }
 
-    // Colour the two bars currently being compared; everything else back to normal.
+    // Colour the two bars being compared; everything else back to normal.
     public void Highlight(int a, int b)
     {
         for (int i = 0; i < bars.Length; i++)
@@ -96,23 +78,19 @@ public class SortVisualizer : MonoBehaviour
 
     private Coroutine sortRoutine;
 
-    // Runs a chosen sorting strategy on the bars. Stops any sort already in progress first,
-    // so starting a new question does not leave an old animation running.
+    // Stops any animation still running, so a new question does not overlap the old one.
     public void PlaySort(ISortStrategy strategy)
     {
         if (sortRoutine != null) StopCoroutine(sortRoutine);
         sortRoutine = StartCoroutine(strategy.Sort(this, stepDelay));
     }
-
-    // ------------------------------------------------------------------
-    // ALGORITHM 2 - Fisher-Yates shuffle (O(n)): scramble the bars fairly.
-    // Walk from the last index down; swap each item with a random earlier-or-equal one.
-    // ------------------------------------------------------------------
+  
+    // Fisher-Yates, O(n): swap each item with a random earlier-or-equal one.
     public void Shuffle()
     {
         for (int i = values.Length - 1; i > 0; i--)
         {
-            int j = Random.Range(0, i + 1); // random index from 0..i
+            int j = Random.Range(0, i + 1);
             int temp = values[i];
             values[i] = values[j];
             values[j] = temp;
@@ -125,12 +103,9 @@ public class SortVisualizer : MonoBehaviour
         targetIndex = -1;
         ClearHighlight();
     }
+ 
+    // ---- Searching support ----
 
-    // ------------------------------------------------------------------
-    // Searching support (used by the searching round).
-    // ------------------------------------------------------------------
-
-    // Put the bars in ascending order (binary search needs a sorted list).
     public void SortAscending()
     {
         for (int i = 0; i < values.Length; i++)
@@ -145,7 +120,7 @@ public class SortVisualizer : MonoBehaviour
         ClearHighlight();
     }
 
-    // Colour the bar the search is hunting for.
+    // Colour the bar being hunted for.
     public void SetTarget(int targetValue)
     {
         targetIndex = System.Array.IndexOf(values, targetValue);
@@ -155,7 +130,7 @@ public class SortVisualizer : MonoBehaviour
         }
     }
 
-    // Highlight the bar currently being checked, keeping the target bar visible.
+    // Highlight the bar being checked, keeping the target visible.
     public void Examine(int index)
     {
         for (int i = 0; i < bars.Length; i++)
@@ -167,33 +142,28 @@ public class SortVisualizer : MonoBehaviour
         }
     }
 
-    // Flash the found bar green.
     public void MarkFound(int index)
     {
         bars[index].color = foundColor;
     }
 
-    // Runs a chosen search strategy on the (sorted) bars. Stops any animation already running.
     public void PlaySearch(ISearchStrategy strategy, int targetValue)
     {
         if (sortRoutine != null) StopCoroutine(sortRoutine);
         sortRoutine = StartCoroutine(strategy.Search(this, targetValue, stepDelay));
     }
-
-    // ------------------------------------------------------------------
-    // Building the bars (plumbing).
-    // ------------------------------------------------------------------
+ 
+    // ---- Building the bars ----
 
     private void BuildBars()
     {
         if (barsParent != null)
         {
-            // Draw into the slot the Scene Builder gave us (inside the game panel).
             container = barsParent;
         }
         else
         {
-            // No slot assigned: make our own canvas + centred container (empty-scene test).
+            // No slot assigned, so build our own canvas and centred container.
             Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null)
             {
@@ -216,21 +186,21 @@ public class SortVisualizer : MonoBehaviour
             container.sizeDelta = new Vector2(1200, 520);
         }
 
-        // Work out sizes from the container width/height and bar count.
+        // Sizes come from the container and the bar count.
         float areaWidth = container.rect.width;
         float areaHeight = container.rect.height;
         slot = areaWidth / barCount;
         barWidth = slot * 0.7f;
         heightUnit = (areaHeight - 40f) / barCount;
 
-        // Start with values 1..barCount (they get shuffled by the demo / question flow).
+        // Values 1..barCount, shuffled later by whatever drives the round.
         values = new int[barCount];
         for (int i = 0; i < barCount; i++)
         {
             values[i] = i + 1;
         }
 
-        // Create one bar Image per value.
+        // One Image per value.
         bars = new Image[barCount];
         for (int i = 0; i < barCount; i++)
         {
@@ -250,15 +220,11 @@ public class SortVisualizer : MonoBehaviour
         }
     }
 
-    // Set bar i's size to match its current value.
     private void ResizeBar(int i)
     {
         bars[i].rectTransform.sizeDelta = new Vector2(barWidth, values[i] * heightUnit);
     }
-
-    // ------------------------------------------------------------------
-    // TEMPORARY demo loop - alternates the two algorithms so you can compare them.
-    // ------------------------------------------------------------------
+  
     private IEnumerator DemoLoop()
     {
         ISortStrategy[] strategies = { new BubbleSortStrategy(), new SelectionSortStrategy() };

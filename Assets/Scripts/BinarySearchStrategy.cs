@@ -1,14 +1,7 @@
-// BinarySearchStrategy.cs
 using System.Collections;
 using UnityEngine;
 
-// PATTERN - STRATEGY (concrete)  +  ALGORITHM (searching).
-//
-// Binary Search only works on a SORTED list. It looks at the MIDDLE bar, then throws away the
-// half that cannot contain the target and repeats. Visually it jumps to the middle and keeps
-// halving - big jumps, very few checks - which is how the player tells it from Linear Search.
-//
-// Big O: O(log n) - each step removes half the remaining bars.
+// Checks the middle bar and discards the half that cannot hold the target. Needs a sorted list. O(log n).
 public class BinarySearchStrategy : ISearchStrategy
 {
     public string Name { get { return "Binary Search"; } }
@@ -22,14 +15,14 @@ public class BinarySearchStrategy : ISearchStrategy
         {
             int mid = (low + high) / 2;
 
-            viz.Examine(mid); // highlight the middle bar we are checking
+            viz.Examine(mid);
             yield return new WaitForSeconds(stepDelay);
 
             int value = viz.GetValue(mid);
             if (value == targetValue)
             {
                 viz.MarkFound(mid);
-                yield break; // found it
+                yield break;
             }
             else if (value < targetValue)
             {
